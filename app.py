@@ -2,7 +2,7 @@
 import os
 os.environ.setdefault("ORDERNET_BROKER", "psagot")
 
-from ordernet_mcp import mcp as upstream
+from broker_adapter import upstream
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations

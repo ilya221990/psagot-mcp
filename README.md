@@ -25,7 +25,7 @@ Find your own Auth0 user's User ID, such as auth0|... or google-oauth2|..., and 
 
 ## Render configuration
 
-For the existing service, set these fields manually in Render Settings (committing render.yaml does not alter an existing non-Blueprint service):
+The existing Render command imports ordernet_mcp.mcp.run. The repository's compatibility entry point now routes that command to the OAuth-protected application. broker_adapter loads the installed broker source and refuses an SDK/source version different from the tested versions. The old build command works while those versions match; for reproducible builds, set these fields in Render Settings (committing render.yaml does not alter an existing non-Blueprint service):
 - Build Command: pip install -r requirements.txt
 - Start Command: python app.py
 - Health Check Path: /healthz
@@ -50,7 +50,7 @@ Complete the identity provider's login/consent screen. ChatGPT receives OAuth to
 
 Run: python -m unittest -q test_oauth
 
-14 offline tests cover OAuth metadata/challenges, authenticated MCP initialize and discovery of all 11 tools, required owner and scope, issuer and audience, expiration/not-before, missing expiration, wrong signature/algorithm, JWKS caching, key rotation, bounded unknown-key fetching, provider outages, malformed/oversized JWKS, missing configuration, and invalid URLs.
+15 offline tests cover OAuth metadata/challenges, authenticated MCP initialize and discovery of all 11 tools, required owner and scope, issuer and audience, expiration/not-before, missing expiration, wrong signature/algorithm, JWKS caching, key rotation, bounded unknown-key fetching, provider outages, malformed/oversized JWKS, missing configuration, invalid URLs, and OAuth enforcement through the existing Render command.
 
 These checks do not prove live identity-provider login, PKCE/code exchange, refresh, ChatGPT connection behavior, Render deployment, or broker authentication. Those require a configured personal identity provider and a deployed service.
 

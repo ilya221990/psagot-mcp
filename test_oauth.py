@@ -4,6 +4,7 @@ import json
 import os
 import time
 import unittest
+from unittest.mock import patch
 
 # Test requests never use the host's outbound proxy.
 for name in list(os.environ):
@@ -101,6 +102,14 @@ class VerificationTests(unittest.IsolatedAsyncioTestCase):
 
 
 class HTTPTests(unittest.TestCase):
+    def test_existing_render_command_uses_oauth_application(self):
+        import ordernet_mcp
+        from app import app
+        with patch("ordernet_mcp.uvicorn.run") as run:
+            ordernet_mcp.mcp.run(transport="streamable-http", host="0.0.0.0", port=10000,
+                                streamable_http_path="/mcp", stateless_http=True, json_response=True)
+            run.assert_called_once_with(app, host="0.0.0.0", port=10000, access_log=False)
+
     def test_discovery_and_unauthorized_challenge(self):
         verifier = JWTVerifier(CONFIG, httpx.MockTransport(lambda request: httpx.Response(200, json={"keys": [JWK]})))
         with TestClient(create_app(CONFIG, verifier)) as c:
