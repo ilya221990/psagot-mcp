@@ -1,0 +1,3 @@
+spark-ordernet-mcp @ git+https://github.com/anhermon/spark-ordernet-mcp.git@main
+mcp==2.2.0
+uvicorn>=0.30,<1
