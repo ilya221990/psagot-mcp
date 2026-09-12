@@ -1,3 +1,4 @@
-spark-ordernet-mcp @ git+https://github.com/anhermon/spark-ordernet-mcp.git@main
+spark-ordernet-mcp @ git+https://github.com/anhermon/spark-ordernet-mcp.git@d338170704d95fc5f72bdb2ccbe99723694fdaba
 mcp==2.2.0
+PyJWT[crypto]==2.10.1
 uvicorn>=0.30,<1

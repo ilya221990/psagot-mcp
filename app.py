@@ -1,36 +1,59 @@
-"""Authenticated, read-only Psagot MCP HTTP entry point."""
-import hmac
+"""Read-only Psagot MCP resource server with OAuth authentication."""
 import os
-
 os.environ.setdefault("ORDERNET_BROKER", "psagot")
 
-from ordernet_mcp import mcp
+from ordernet_mcp import mcp as upstream
+from mcp.server.auth.settings import AuthSettings
+from mcp.server.mcpserver import MCPServer
+from mcp.types import ToolAnnotations
 from starlette.responses import JSONResponse
+from starlette.routing import Route
 import uvicorn
+from oauth import OAuthConfig, JWTVerifier
 
-inner = mcp.streamable_http_app(
-    host="0.0.0.0",
-    streamable_http_path="/mcp",
-    stateless_http=True,
-    json_response=True,
-)
 
-class ProtectedApp:
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http":
-            return await inner(scope, receive, send)
-        if scope["path"] == "/healthz":
-            return await JSONResponse({"status": "ok"})(scope, receive, send)
-        token = os.environ.get("MCP_ACCESS_TOKEN", "")
-        headers = dict(scope.get("headers", []))
-        supplied = headers.get(b"authorization", b"").decode("latin-1")
-        if not token:
-            return await JSONResponse({"error": "MCP access is not configured"}, status_code=503)(scope, receive, send)
-        if not hmac.compare_digest(supplied.encode(), ("Bearer " + token).encode()):
-            return await JSONResponse({"error": "Unauthorized"}, status_code=401)(scope, receive, send)
+def create_app(config=None, verifier=None):
+    config = config or OAuthConfig.from_env()
+    tools = []
+    # Both versions are pinned. Preserve upstream's explicit broker GET allowlist.
+    for tool in upstream._tool_manager.list_tools():
+        tools.append(tool.model_copy(update={
+            "meta": {**(tool.meta or {}), "securitySchemes": [
+                {"type": "oauth2", "scopes": [config.scope]}
+            ]},
+            "annotations": ToolAnnotations(readOnlyHint=True, destructiveHint=False),
+        }))
+    server = MCPServer(
+        "psagot-trade", tools=tools,
+        token_verifier=verifier or JWTVerifier(config),
+        auth=AuthSettings(
+            issuer_url=config.issuer or config.resource,
+            resource_server_url=config.resource,
+            validate_token_resource=True,
+            required_scopes=[config.scope],
+        ),
+    )
+    inner = server.streamable_http_app(
+        host="0.0.0.0", streamable_http_path="/mcp",
+        stateless_http=True, json_response=True,
+    )
+
+    async def health(request):
+        return JSONResponse({"status": "ok", "oauth_configured": config.ready})
+
+    inner.routes.insert(0, Route("/healthz", health))
+
+    async def app(scope, receive, send):
+        if scope["type"] == "http" and scope["path"] != "/healthz" and not config.ready:
+            return await JSONResponse(
+                {"error": "OAuth configuration is incomplete"}, status_code=503,
+                headers={"Cache-Control": "no-store"},
+            )(scope, receive, send)
         return await inner(scope, receive, send)
 
-app = ProtectedApp()
+    return app
 
+
+app = create_app()
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "10000")), access_log=False)

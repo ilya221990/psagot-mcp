@@ -12,9 +12,13 @@ services:
         value: 3.12.12
       - key: ORDERNET_BROKER
         value: psagot
+      - key: PUBLIC_BASE_URL
+        value: https://psagot-mcp-personal.onrender.com
+      - key: OAUTH_ISSUER
+        sync: false
+      - key: OAUTH_ALLOWED_SUBJECT
+        sync: false
       - key: ORDERNET_USERNAME
         sync: false
       - key: ORDERNET_PASSWORD
         sync: false
-      - key: MCP_ACCESS_TOKEN
-        generateValue: true
